@@ -37,6 +37,7 @@ dependencies:
   youtube_player_iframe: ^3.0.4
   provider: ^6.0.3
   miniplayer: ^1.0.1
+  flutter_inappwebview: ^5.4.3+7
 
 dev_dependencies:
   flutter_test:

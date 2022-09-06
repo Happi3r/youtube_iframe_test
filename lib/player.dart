@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:miniplayer/miniplayer.dart';
 import 'package:provider/provider.dart';
@@ -17,17 +19,16 @@ class _PlayerState extends State<Player> {
     final ytCtrl = context.ytController;
     Playlist playlist = Provider.of<Playlist>(context);
     return Miniplayer(
-      minHeight: 62,
+      minHeight: 60,
       maxHeight: 240,
       builder: (height, percent) => playlist.now != null
-          ? Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 60,
-                  color: Colors.white,
-                  padding: const EdgeInsets.all(5),
-                  child: Row(
+          ? Container(
+              width: double.infinity,
+              color: Colors.white,
+              height: 60,
+              child: Column(
+                children: [
+                  Row(
                     children: [
                       const SizedBox(
                         width: 5,
@@ -44,14 +45,16 @@ class _PlayerState extends State<Player> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(playlist.now!.title,
-                                overflow: TextOverflow.fade,
-                                softWrap: false,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontFamily: "Pretendard",
-                                  fontWeight: FontWeight.w700,
-                                )),
+                            Text(
+                              playlist.now!.title,
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontFamily: "Pretendard",
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             Text(playlist.now!.artist,
                                 overflow: TextOverflow.fade,
                                 softWrap: false,
@@ -92,11 +95,11 @@ class _PlayerState extends State<Player> {
                       ),
                     ],
                   ),
-                ),
-                const DurationProgressIndicator(
-                  type: ProgressType.mini,
-                ),
-              ],
+                  const DurationProgressIndicator(
+                    type: ProgressType.mini,
+                  ),
+                ],
+              ),
             )
           : Container(),
     );
@@ -118,16 +121,24 @@ class DurationProgressIndicator extends StatefulWidget {
 class _DurationProgressIndicatorState extends State<DurationProgressIndicator> {
   @override
   Widget build(BuildContext context) {
-    final ytCtrl = context.ytController;
+    var ytCtrl = context.ytController;
+    num position = 0;
     return Consumer<Playlist>(
       builder: (context, playlist, _) => StreamBuilder<Duration>(
         stream: ytCtrl.getCurrentPositionStream(),
         initialData: Duration.zero,
         builder: (context, snapshot) {
-          if (snapshot.hasError) {
+          if (snapshot.hasError && playlist.now != null) {
             print('sibalalaaal ${snapshot.error}');
+            // ytCtrl = YoutubePlayerController.fromVideoId(
+            //   videoId: playlist.now!.id,
+            //   startSeconds: position.toDouble(),
+            //   params: const YoutubePlayerParams(
+            //     showControls: false,
+            //   ),
+            // );
           }
-          num position = snapshot.data?.inMilliseconds ?? 0;
+          position = snapshot.data?.inMilliseconds ?? 0;
           final duration = ytCtrl.metadata.duration.inMilliseconds;
           switch (widget.type) {
             case ProgressType.mini:
@@ -140,19 +151,13 @@ class _DurationProgressIndicatorState extends State<DurationProgressIndicator> {
                 backgroundColor: Colors.transparent,
               );
             case ProgressType.slider:
-              if (position != 0 && position == duration) {
-                playlist.next();
-              }
-              double value = position.toDouble();
-              print('$value ||| $position ||| $duration');
+              if (position != 0 && position == duration) playlist.next();
+              double val = position.toDouble();
+              print('$val ||| $position ||| $duration');
               return Slider(
                 max: duration.toDouble(),
-                value: value,
-                onChanged: (v) => setState(() {
-                  print('$v <<<<<');
-                  value = v;
-                }),
-                onChangeEnd: (v) => ytCtrl.seekTo(
+                value: val,
+                onChanged: (v) => ytCtrl.seekTo(
                   seconds: v / 1000,
                   allowSeekAhead: true,
                 ),

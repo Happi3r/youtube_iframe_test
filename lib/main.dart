@@ -2,21 +2,144 @@ import 'package:flutter/material.dart';
 import 'package:miniplayer/miniplayer.dart';
 import 'package:provider/provider.dart';
 import 'package:shaval/player.dart';
+import 'package:shaval/webview.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 void main() {
-  runApp(const Youtube());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => YoutubeViewModel()),
+        ChangeNotifierProvider(create: (_) => Playlist()),
+      ],
+      child: const Youtube(),
+    ),
+  );
 }
 
-class Youtube extends StatefulWidget {
+class Youtube extends StatelessWidget {
   const Youtube({Key? key}) : super(key: key);
 
   @override
-  State<Youtube> createState() => _YoutubeState();
+  Widget build(BuildContext context) {
+    YoutubeViewModel viewModel = Provider.of<YoutubeViewModel>(context);
+    return MaterialApp(
+      home: Consumer<Playlist>(
+        builder: (context, playlist, _) => YoutubePlayerScaffold(
+          controller: viewModel.controller,
+          builder: (context, player) {
+            return Scaffold(
+              body: SafeArea(
+                child: Stack(
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(playlist.now?.title ?? '없음'),
+                        Text(viewModel.controller.metadata.title),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 200),
+                          child: SizedBox(
+                            width: playlist.ani ? 100 : 0,
+                            height: playlist.ani ? 100 : 0,
+                            child: const FuckinWebView(),
+                          ),
+                        ),
+                        Wrap(
+                          children: viewModel.ids
+                              .map(
+                                (e) => TextButton(
+                                  onPressed: () => playlist.add(e),
+                                  child: Text(e.title),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                        YoutubeValueBuilder(
+                          builder: (context, value) => Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              IconButton(
+                                onPressed: playlist.update,
+                                icon: const Icon(Icons.update),
+                              ),
+                              IconButton(
+                                onPressed: playlist.prev,
+                                icon: const Icon(Icons.skip_previous),
+                              ),
+                              IconButton(
+                                onPressed:
+                                    value.playerState == PlayerState.playing
+                                        ? viewModel.controller.pauseVideo
+                                        : viewModel.controller.playVideo,
+                                icon: Icon(
+                                    value.playerState == PlayerState.playing
+                                        ? Icons.pause
+                                        : Icons.play_arrow),
+                              ),
+                              IconButton(
+                                onPressed: playlist.next,
+                                icon: const Icon(Icons.skip_next),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  print(value.playerState);
+                                  viewModel.controller.stopVideo();
+                                  playlist.clear();
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const DurationProgressIndicator(
+                          type: ProgressType.slider,
+                        ),
+                      ],
+                    ),
+                    const Player(),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
-class _YoutubeState extends State<Youtube> {
-  final _controller = YoutubePlayerController();
+class YoutubeViewModel extends ChangeNotifier {
+  late YoutubePlayerController controller;
+  late Playlist playlist;
+
+  YoutubeViewModel() {
+    controller = YoutubePlayerController(
+      params: const YoutubePlayerParams(
+        showControls: false,
+      ),
+    );
+    playlist = Playlist();
+    playlist.addListener(wtf);
+  }
+
+  @override
+  void dispose() {
+    playlist.removeListener(wtf);
+    controller.close();
+    super.dispose();
+  }
+
+  void wtf() {
+    print(controller.metadata.videoId); //i1
+    if (playlist.now?.id != controller.metadata.videoId) {
+      //i0
+      playlist.now == null
+          ? controller.stopVideo() //n1
+          : controller.loadVideoById(videoId: playlist.now!.id); //n0
+    }
+  }
+
   final List<Song> ids = const [
     Song(
       id: 'DPEtmqvaKqY',
@@ -73,113 +196,6 @@ class _YoutubeState extends State<Youtube> {
       title: '리와인드',
     ),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.playVideo();
-  }
-
-  void wtf() {
-    print(_controller.metadata.videoId); //i1
-    if (Playlist().now?.id != _controller.metadata.videoId) {
-      //i0
-      Playlist().now == null
-          ? _controller.stopVideo() //n1
-          : _controller.loadVideoById(videoId: Playlist().now!.id); //n0
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => Playlist()..addListener(wtf),
-      child: MaterialApp(
-        home: Consumer<Playlist>(
-          builder: (context, playlist, _) => YoutubePlayerScaffold(
-            controller: _controller,
-            builder: (context, player) {
-              return Scaffold(
-                body: SafeArea(
-                  child: Stack(
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(playlist.now?.title ?? '없음'),
-                          Text(_controller.metadata.title),
-                          SizedBox(
-                            width: 320,
-                            height: 180,
-                            child: player,
-                          ),
-                          Wrap(
-                            children: ids
-                                .map(
-                                  (e) => TextButton(
-                                    onPressed: () => playlist.add(e),
-                                    child: Text(e.title),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                          YoutubeValueBuilder(
-                            builder: (context, value) => Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                IconButton(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.skip_previous),
-                                ),
-                                IconButton(
-                                  onPressed: playlist.prev,
-                                  icon: const Icon(Icons.skip_previous),
-                                ),
-                                IconButton(
-                                  onPressed:
-                                      value.playerState == PlayerState.playing
-                                          ? _controller.pauseVideo
-                                          : _controller.playVideo,
-                                  icon: Icon(
-                                      value.playerState == PlayerState.playing
-                                          ? Icons.pause
-                                          : Icons.play_arrow),
-                                ),
-                                IconButton(
-                                  onPressed: playlist.next,
-                                  icon: const Icon(Icons.skip_next),
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    print(value.playerState);
-                                    _controller.stopVideo();
-                                    playlist.clear();
-                                  },
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Player(),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.close();
-    Playlist().removeListener(wtf);
-    super.dispose();
-  }
 }
 
 class Song {
@@ -207,6 +223,12 @@ class Playlist extends ChangeNotifier {
 
   int _index = 0;
   int get index => _index;
+
+  bool ani = false;
+  void update() {
+    ani = !ani;
+    notifyListeners();
+  }
 
   void add(Song s) {
     list.add(s);
