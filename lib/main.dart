@@ -1,10 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:miniplayer/miniplayer.dart';
 import 'package:provider/provider.dart';
 import 'package:shaval/player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const Youtube());
 }
 
@@ -61,10 +64,10 @@ class _YoutubeState extends State<Youtube> {
       title: '이세돌 싸이퍼',
     ),
     Song(
-      id: '1UbyyaDc8x0',
-      artist: '릴파',
+      id: 'Brf3LWwNVTk',
+      artist: '이세계 아이돌',
       image: '',
-      title: '세사빠',
+      title: 'LOVE DIVE',
     ),
     Song(
       id: 'fgSXAKsq-Vo',
@@ -160,6 +163,9 @@ class _YoutubeState extends State<Youtube> {
                               ],
                             ),
                           ),
+                          const DurationProgressIndicator(
+                            type: ProgressType.slider,
+                          ),
                         ],
                       ),
                       const Player(),
@@ -176,6 +182,10 @@ class _YoutubeState extends State<Youtube> {
 
   @override
   void dispose() {
+    for (num i = 0; i < 100; i++) {
+      print('ASDFASDFADFSDFSDF0909090090');
+      print('zzzzzz');
+    }
     _controller.close();
     Playlist().removeListener(wtf);
     super.dispose();
@@ -219,8 +229,10 @@ class Playlist extends ChangeNotifier {
   }
 
   void next() {
-    _index = _index == list.length - 1 ? 0 : _index + 1;
-    notifyListeners();
+    if (list.length != 1) {
+      _index = _index == list.length - 1 ? 0 : _index + 1;
+      notifyListeners();
+    }
   }
 
   void clear() {

@@ -119,6 +119,8 @@ class _DurationProgressIndicatorState extends State<DurationProgressIndicator> {
   @override
   Widget build(BuildContext context) {
     final ytCtrl = context.ytController;
+    bool isUpdating = false;
+    double value = 0;
     return Consumer<Playlist>(
       builder: (context, playlist, _) => StreamBuilder<Duration>(
         stream: ytCtrl.getCurrentPositionStream(),
@@ -131,7 +133,9 @@ class _DurationProgressIndicatorState extends State<DurationProgressIndicator> {
           final duration = ytCtrl.metadata.duration.inMilliseconds;
           switch (widget.type) {
             case ProgressType.mini:
-              if (position != 0 && position == duration) {
+              if (position != 0 &&
+                  position == duration &&
+                  playlist.list.length != 1) {
                 playlist.next();
               }
               return LinearProgressIndicator(
@@ -140,22 +144,26 @@ class _DurationProgressIndicatorState extends State<DurationProgressIndicator> {
                 backgroundColor: Colors.transparent,
               );
             case ProgressType.slider:
-              if (position != 0 && position == duration) {
+              if (position != 0 &&
+                  position == duration &&
+                  playlist.list.length != 1) {
                 playlist.next();
               }
-              double value = position.toDouble();
-              print('$value ||| $position ||| $duration');
+              value = position.toDouble();
+              print('$value ||| $position ||| $duration ||| $isUpdating');
               return Slider(
                 max: duration.toDouble(),
-                value: value,
+                value: duration == 0 ? 0 : value,
                 onChanged: (v) => setState(() {
                   print('$v <<<<<');
                   value = v;
                 }),
-                onChangeEnd: (v) => ytCtrl.seekTo(
-                  seconds: v / 1000,
-                  allowSeekAhead: true,
-                ),
+                onChangeEnd: (v) => setState(() {
+                  ytCtrl.seekTo(
+                    seconds: v / 1000,
+                    allowSeekAhead: true,
+                  );
+                }),
               );
           }
         },
