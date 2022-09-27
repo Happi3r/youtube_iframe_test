@@ -1,14 +1,20 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:miniplayer/miniplayer.dart';
 import 'package:provider/provider.dart';
-import 'package:shaval/player.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const Youtube());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => Playlist()),
+      ],
+      child: const MaterialApp(
+        home: Youtube(),
+        debugShowCheckedModeBanner: false,
+      ),
+    ),
+  );
 }
 
 class Youtube extends StatefulWidget {
@@ -19,7 +25,6 @@ class Youtube extends StatefulWidget {
 }
 
 class _YoutubeState extends State<Youtube> {
-  final _controller = YoutubePlayerController();
   final List<Song> ids = const [
     Song(
       id: 'DPEtmqvaKqY',
@@ -78,117 +83,118 @@ class _YoutubeState extends State<Youtube> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _controller.playVideo();
-  }
-
-  void wtf() {
-    print(_controller.metadata.videoId); //i1
-    if (Playlist().now?.id != _controller.metadata.videoId) {
-      //i0
-      Playlist().now == null
-          ? _controller.stopVideo() //n1
-          : _controller.loadVideoById(videoId: Playlist().now!.id); //n0
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => Playlist()..addListener(wtf),
-      child: MaterialApp(
-        home: Consumer<Playlist>(
-          builder: (context, playlist, _) => YoutubePlayerScaffold(
-            controller: _controller,
-            builder: (context, player) {
-              return Scaffold(
-                body: SafeArea(
-                  child: Stack(
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(playlist.now?.title ?? '없음'),
-                          Text(_controller.metadata.title),
-                          SizedBox(
-                            width: 320,
-                            height: 180,
-                            child: player,
-                          ),
-                          Wrap(
-                            children: ids
-                                .map(
-                                  (e) => TextButton(
-                                    onPressed: () => playlist.add(e),
-                                    child: Text(e.title),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                          YoutubeValueBuilder(
-                            builder: (context, value) => Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                IconButton(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.skip_previous),
-                                ),
-                                IconButton(
-                                  onPressed: playlist.prev,
-                                  icon: const Icon(Icons.skip_previous),
-                                ),
-                                IconButton(
-                                  onPressed:
-                                      value.playerState == PlayerState.playing
-                                          ? _controller.pauseVideo
-                                          : _controller.playVideo,
-                                  icon: Icon(
-                                      value.playerState == PlayerState.playing
-                                          ? Icons.pause
-                                          : Icons.play_arrow),
-                                ),
-                                IconButton(
-                                  onPressed: playlist.next,
-                                  icon: const Icon(Icons.skip_next),
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    print(value.playerState);
-                                    _controller.stopVideo();
-                                    playlist.clear();
-                                  },
-                                  icon: const Icon(Icons.close),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const DurationProgressIndicator(
-                            type: ProgressType.slider,
-                          ),
-                        ],
+    return Consumer<Playlist>(
+      builder: (context, playlist, _) {
+        return Scaffold(
+          body: SafeArea(
+            child: Column(
+              children: [
+                YoutubePlayer(controller: playlist.controller),
+                Wrap(
+                  children: [
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.queue_music),
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.skip_previous),
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        playlist.controller.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
                       ),
-                      const Player(),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.skip_next),
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.queue_music),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ],
+            ),
           ),
-        ),
-      ),
+          bottomNavigationBar: const Player(),
+        );
+      },
     );
   }
+}
+
+class Player extends StatefulWidget {
+  const Player({Key? key}) : super(key: key);
 
   @override
-  void dispose() {
-    for (num i = 0; i < 100; i++) {
-      print('ASDFASDFADFSDFSDF0909090090');
-      print('zzzzzz');
-    }
-    _controller.close();
-    Playlist().removeListener(wtf);
-    super.dispose();
+  State<Player> createState() => _PlayerState();
+}
+
+class _PlayerState extends State<Player> {
+  bool asdf = false;
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<Playlist>(
+      builder: (context, playlist, _) {
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              alignment: Alignment.center,
+              height: asdf ? MediaQuery.of(context).size.height - 56 : 500,
+              child: Column(
+                children: [
+                  YoutubePlayer(controller: playlist.controller),
+                  Wrap(
+                    children: [
+                      IconButton(
+                        onPressed: () => setState(() => asdf = !asdf),
+                        icon: const Icon(Icons.queue_music),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.skip_previous),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: Icon(
+                          playlist.controller.value.isPlaying
+                              ? Icons.pause
+                              : Icons.play_arrow,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.skip_next),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.queue_music),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.ease,
+              height: asdf ? 0 : 56,
+              width: double.infinity,
+              color: Colors.black,
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -218,6 +224,9 @@ class Playlist extends ChangeNotifier {
   int _index = 0;
   int get index => _index;
 
+  YoutubePlayerController controller =
+      YoutubePlayerController(initialVideoId: '');
+
   void add(Song s) {
     list.add(s);
     notifyListeners();
@@ -229,8 +238,9 @@ class Playlist extends ChangeNotifier {
   }
 
   void next() {
-    if (list.length != 1) {
+    if (list.length < 2) {
       _index = _index == list.length - 1 ? 0 : _index + 1;
+      controller.load(now!.id);
       notifyListeners();
     }
   }
