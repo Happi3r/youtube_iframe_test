@@ -37,6 +37,11 @@ dependencies:
   youtube_player_iframe: ^3.0.4
   provider: ^6.0.3
   miniplayer: ^1.0.1
+  device_info_plus: ^6.0.0
+  flutter_background_service: ^2.4.5
+  shared_preferences: ^2.0.15
+  flutter_local_notifications: ^12.0.2
+  flutter_inappwebview: ^5.5.0+2
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +64,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

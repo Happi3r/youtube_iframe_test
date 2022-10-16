@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:miniplayer/miniplayer.dart';
 import 'package:provider/provider.dart';
-import 'package:shaval/main.dart';
+import 'package:shaval/youtube.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 class Player extends StatefulWidget {
