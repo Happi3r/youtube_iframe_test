@@ -40,33 +40,6 @@ class _MyAppState extends State<Headless> {
       },
       onConsoleMessage: (controller, consoleMessage) {
         log('Console Message: ${consoleMessage.message}');
-        // final snackBar = SnackBar(
-        //   content: Text('Console Message: ${consoleMessage.message}'),
-        //   duration: Duration(seconds: 1),
-        // );
-        // ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      },
-      onLoadStart: (controller, url) async {
-        final snackBar = SnackBar(
-          content: Text('onLoadStart $url'),
-          duration: Duration(seconds: 1),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
-        setState(() {
-          this.url = url?.toString() ?? '';
-        });
-      },
-      onLoadStop: (controller, url) async {
-        final snackBar = SnackBar(
-          content: Text('onLoadStop $url'),
-          duration: Duration(seconds: 1),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
-        setState(() {
-          this.url = url?.toString() ?? '';
-        });
       },
     );
   }
