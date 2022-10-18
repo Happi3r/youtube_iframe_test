@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:shaval/singleton.dart';
 
 // The callback function should always be a top-level function.
 @pragma('vm:entry-point')
@@ -11,8 +12,6 @@ void startCallback() {
   // The setTaskHandler function must be called to handle the task in the background.
   FlutterForegroundTask.setTaskHandler(MyTaskHandler());
 }
-
-HeadlessInAppWebView? headlessWebView;
 
 class MyTaskHandler extends TaskHandler {
   SendPort? _sendPort;
@@ -30,9 +29,10 @@ class MyTaskHandler extends TaskHandler {
 
   @override
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
+    double time = await FlutterForegroundTask.getData(key: 'time');
     FlutterForegroundTask.updateService(
       notificationTitle: 'MyTaskHandler',
-      notificationText: 'eventCount: $_eventCount',
+      notificationText: 'currentTime: ${time.toStringAsFixed(2)}',
     );
 
     // Send data to the main isolate.
@@ -52,15 +52,9 @@ class MyTaskHandler extends TaskHandler {
     // Called when the notification button on the Android platform is pressed.
     print('onButtonPressed >> $id');
     if (id == 'testButton') {
-      log('exit');
-      headlessWebView?.webViewController.evaluateJavascript(
-        source: 'player.pauseVideo();',
-      );
+      _sendPort?.send('playVideo');
     } else if (id == 'sendButton') {
-      log('enter');
-      headlessWebView?.webViewController.evaluateJavascript(
-        source: 'player.playVideo();',
-      );
+      _sendPort?.send('pauseVideo');
     }
   }
 
@@ -99,18 +93,12 @@ class ExamplePage extends StatefulWidget {
   const ExamplePage({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _ExamplePageState();
+  State<StatefulWidget> createState() => ExamplePageState();
 }
 
-class _ExamplePageState extends State<ExamplePage> {
+class ExamplePageState extends State<ExamplePage> {
   ReceivePort? _receivePort;
-
-  void playVideo() {
-    log('playvideo');
-    headlessWebView?.webViewController.evaluateJavascript(
-      source: 'player.playVideo();',
-    );
-  }
+  // Helper helper = Helper();
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -136,7 +124,7 @@ class _ExamplePageState extends State<ExamplePage> {
         showNotification: true,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 500,
+        interval: 1000,
         isOnceEvent: false,
         autoRunOnBoot: true,
         allowWakeLock: true,
@@ -169,7 +157,7 @@ class _ExamplePageState extends State<ExamplePage> {
 
     bool reqResult;
     if (await FlutterForegroundTask.isRunningService) {
-      headlessWebView?.dispose();
+      // helper.headlessWebView?.dispose();
       reqResult = await FlutterForegroundTask.restartService();
     } else {
       reqResult = await FlutterForegroundTask.startService(
@@ -178,7 +166,8 @@ class _ExamplePageState extends State<ExamplePage> {
         callback: startCallback,
       );
     }
-    headlessWebView?.run();
+    // helper.headlessWebView?.run();
+    // log('${++h.index} ${hh.index}');
 
     ReceivePort? receivePort;
     if (reqResult) {
@@ -189,7 +178,7 @@ class _ExamplePageState extends State<ExamplePage> {
   }
 
   Future<bool> _stopForegroundTask() async {
-    headlessWebView?.dispose();
+    // helper.headlessWebView?.dispose();
     initWebView();
     return await FlutterForegroundTask.stopService();
   }
@@ -203,8 +192,24 @@ class _ExamplePageState extends State<ExamplePage> {
         if (message is int) {
           print('eventCount: $message');
         } else if (message is String) {
-          if (message == 'onNotificationPressed') {
-            Navigator.of(context).pushNamed('/resume-route');
+          log(message);
+          switch (message) {
+            case 'onNotificationPressed':
+              Navigator.of(context).pushNamed('/resume-route');
+              break;
+            case 'playVideo':
+              // helper.playVideo();
+              controller?.evaluateJavascript(source: 'player.playVideo();');
+              break;
+            case 'pauseVideo':
+              // helper.pauseVideo();
+              controller?.evaluateJavascript(source: 'player.pauseVideo();');
+              setState(() => temp = "PAUSED");
+              break;
+            case 'onForeground':
+              // helper.playVideo();
+              controller?.evaluateJavascript(source: 'player.playVideo();');
+              break;
           }
         } else if (message is DateTime) {
           print('timestamp: ${message.toString()}');
@@ -236,44 +241,35 @@ class _ExamplePageState extends State<ExamplePage> {
         _registerReceivePort(newReceivePort);
       }
       log('wahaa');
+      _startForegroundTask();
     });
     initWebView();
+    log('twice?');
   }
 
   void initWebView() {
-    headlessWebView = HeadlessInAppWebView(
-      initialFile: 'assets/player.html',
-      initialOptions: InAppWebViewGroupOptions(
-        crossPlatform: InAppWebViewOptions(
-          mediaPlaybackRequiresUserGesture: false,
-        ),
-      ),
-      onWebViewCreated: (controller) {
-        controller.addJavaScriptHandler(
-          handlerName: 'Ready',
-          callback: (args) {
-            playVideo();
-          },
-        );
-        controller.addJavaScriptHandler(
-          handlerName: 'StateChange',
-          callback: (args) {
-            playVideo();
-          },
-        );
-        const snackBar = SnackBar(
-          content: Text('HeadlessInAppWebView created!'),
-          duration: Duration(seconds: 1),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      },
-      onCloseWindow: (controller) {
-        log('closed webview');
-      },
-      onConsoleMessage: (controller, consoleMessage) {
-        log('Console Message: ${consoleMessage.message}');
-      },
-    );
+    // helper.headlessWebView = HeadlessInAppWebView(
+    //   initialFile: 'assets/player.html',
+    //   initialOptions: InAppWebViewGroupOptions(
+    //     crossPlatform: InAppWebViewOptions(
+    //       mediaPlaybackRequiresUserGesture: false,
+    //     ),
+    //   ),
+    //   onWebViewCreated: (controller) {
+    //     controller.addJavaScriptHandler(
+    //       handlerName: 'Ready',
+    //       callback: (args) {
+    //         helper.playVideo();
+    //       },
+    //     );
+    //   },
+    //   onCloseWindow: (controller) {
+    //     log('closed webview');
+    //   },
+    //   onConsoleMessage: (controller, consoleMessage) {
+    //     log('Console Message: ${consoleMessage.message}');
+    //   },
+    // );
   }
 
   @override
@@ -281,6 +277,9 @@ class _ExamplePageState extends State<ExamplePage> {
     _closeReceivePort();
     super.dispose();
   }
+
+  String temp = "TEST";
+  InAppWebViewController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -300,8 +299,8 @@ class _ExamplePageState extends State<ExamplePage> {
   Widget _buildContentView() {
     buttonBuilder(String text, {VoidCallback? onPressed}) {
       return ElevatedButton(
-        child: Text(text),
         onPressed: onPressed,
+        child: Text(text),
       );
     }
 
@@ -315,6 +314,48 @@ class _ExamplePageState extends State<ExamplePage> {
           buttonBuilder('stop', onPressed: () {
             _stopForegroundTask();
           }),
+          buttonBuilder('index', onPressed: () async {
+            double a = await controller?.evaluateJavascript(
+                source: 'player.getCurrentTime();');
+            FlutterForegroundTask.saveData(key: 'time', value: a);
+          }),
+          Text(
+            temp,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.width * 9 / 16,
+            child: InAppWebView(
+              initialFile: 'assets/player.html',
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  mediaPlaybackRequiresUserGesture: false,
+                ),
+              ),
+              onWebViewCreated: (c) {
+                controller = c;
+                controller?.addJavaScriptHandler(
+                  handlerName: 'Ready',
+                  callback: (args) {
+                    // helper.playVideo();
+                    controller?.evaluateJavascript(
+                      source: 'player.playVideo()',
+                    );
+                  },
+                );
+              },
+              onCloseWindow: (c) {
+                log('closed webview');
+              },
+              onConsoleMessage: (c, consoleMessage) {
+                log('Console Message: ${consoleMessage.message}');
+              },
+            ),
+          ),
         ],
       ),
     );
