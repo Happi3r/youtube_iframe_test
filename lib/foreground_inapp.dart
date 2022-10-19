@@ -4,63 +4,7 @@ import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:shaval/singleton.dart';
-
-// The callback function should always be a top-level function.
-@pragma('vm:entry-point')
-void startCallback() {
-  // The setTaskHandler function must be called to handle the task in the background.
-  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
-}
-
-class MyTaskHandler extends TaskHandler {
-  SendPort? _sendPort;
-  // int _eventCount = 0;
-
-  @override
-  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-    _sendPort = sendPort;
-
-    // You can use the getData function to get the stored data.
-    final data = await FlutterForegroundTask.getData<String>(key: 'customData');
-    print('customData: $data');
-  }
-
-  @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    double time = await FlutterForegroundTask.getData(key: 'time');
-    FlutterForegroundTask.updateService(
-      notificationTitle: 'MyTaskHandler',
-      notificationText: 'currentTime: ${time.toStringAsFixed(2)}',
-    );
-
-    // Send data to the main isolate.
-    // sendPort?.send(_eventCount++);
-  }
-
-  @override
-  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
-    // You can use the clearAllData function to clear all the stored data.
-    await FlutterForegroundTask.clearAllData();
-  }
-
-  @override
-  void onButtonPressed(String id) {
-    print('onButtonPressed >> $id');
-    if (id == 'play') {
-      _sendPort?.send('playVideo');
-    } else if (id == 'pause') {
-      _sendPort?.send('pauseVideo');
-    }
-  }
-
-  @override
-  void onNotificationPressed() {
-    FlutterForegroundTask.launchApp("/");
-    _sendPort?.send('onNotificationPressed');
-    log('Noti Pressed');
-  }
-}
+import 'package:shaval/task_handler.dart';
 
 class Foreground extends StatelessWidget {
   const Foreground({Key? key}) : super(key: key);
@@ -70,23 +14,24 @@ class Foreground extends StatelessWidget {
     return MaterialApp(
       initialRoute: '/',
       routes: {
-        '/': (context) => const ExamplePage(),
+        '/': (context) => const _ExamplePage(),
       },
     );
   }
 }
 
-class ExamplePage extends StatefulWidget {
-  const ExamplePage({Key? key}) : super(key: key);
+class _ExamplePage extends StatefulWidget {
+  const _ExamplePage({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => ExamplePageState();
+  State<StatefulWidget> createState() => _ExamplePageState();
 }
 
-class ExamplePageState extends State<ExamplePage> {
+class _ExamplePageState extends State<_ExamplePage> {
   ReceivePort? _receivePort;
   InAppWebViewController? controller;
   double current = 0;
+  bool isPlaying = false;
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -112,7 +57,7 @@ class ExamplePageState extends State<ExamplePage> {
         showNotification: true,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 1000,
+        interval: 200,
         isOnceEvent: false,
         autoRunOnBoot: true,
         allowWakeLock: true,
@@ -143,6 +88,7 @@ class ExamplePageState extends State<ExamplePage> {
         callback: startCallback,
       );
     }
+    setState(() => isPlaying = true);
 
     ReceivePort? receivePort;
     if (reqResult) {
@@ -153,6 +99,7 @@ class ExamplePageState extends State<ExamplePage> {
   }
 
   Future<bool> _stopForegroundTask() async {
+    setState(() => isPlaying = false);
     return await FlutterForegroundTask.stopService();
   }
 
@@ -161,7 +108,7 @@ class ExamplePageState extends State<ExamplePage> {
 
     if (receivePort != null) {
       _receivePort = receivePort;
-      _receivePort?.listen((message) {
+      _receivePort?.listen((message) async {
         if (message is int) {
           print('eventCount: $message');
         } else if (message is String) {
@@ -180,8 +127,13 @@ class ExamplePageState extends State<ExamplePage> {
               controller?.evaluateJavascript(source: 'player.playVideo();');
               break;
           }
-        } else if (message is DateTime) {
-          print('timestamp: ${message.toString()}');
+        } else if (message == null) {
+          num a = await controller?.evaluateJavascript(
+                source: 'player.getCurrentTime();',
+              ) ??
+              0;
+          FlutterForegroundTask.saveData(key: 'time', value: a.toDouble());
+          setState(() => current = a.toDouble());
         }
       });
       return true;
@@ -222,11 +174,6 @@ class ExamplePageState extends State<ExamplePage> {
     // A widget that prevents the app from closing when the foreground service is running.
     // This widget must be declared above the [Scaffold] widget.
     return WithForegroundTask(
-      onForeground: () {
-        controller?.evaluateJavascript(
-          source: 'player.playVideo();',
-        );
-      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Flutter Foreground Task'),
@@ -255,43 +202,38 @@ class ExamplePageState extends State<ExamplePage> {
           buttonBuilder('stop', onPressed: () {
             _stopForegroundTask();
           }),
-          buttonBuilder('시간 업데이트', onPressed: () async {
-            double a = await controller?.evaluateJavascript(
-              source: 'player.getCurrentTime();',
-            );
-            FlutterForegroundTask.saveData(key: 'time', value: a);
-            setState(() => current = a);
-          }),
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.width * 9 / 16,
-            child: InAppWebView(
-              initialFile: 'assets/player.html',
-              initialOptions: InAppWebViewGroupOptions(
-                crossPlatform: InAppWebViewOptions(
-                  mediaPlaybackRequiresUserGesture: false,
+          if (isPlaying)
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: InAppWebView(
+                initialFile: 'assets/player.html',
+                initialOptions: InAppWebViewGroupOptions(
+                  crossPlatform: InAppWebViewOptions(
+                    mediaPlaybackRequiresUserGesture: false,
+                  ),
                 ),
+                onWebViewCreated: (c) {
+                  controller = c;
+                  c.addJavaScriptHandler(
+                    handlerName: 'Ready',
+                    callback: (args) {
+                      controller?.evaluateJavascript(
+                        source: 'player.playVideo()',
+                      );
+                    },
+                  );
+                },
+                onCloseWindow: (c) {
+                  log('웹뷰 닫힘');
+                },
+                onConsoleMessage: (c, consoleMessage) {
+                  log('Console Message: ${consoleMessage.message}');
+                },
               ),
-              onWebViewCreated: (c) {
-                controller = c;
-                c.addJavaScriptHandler(
-                  handlerName: 'Ready',
-                  callback: (args) {
-                    controller?.evaluateJavascript(
-                      source: 'player.playVideo()',
-                    );
-                  },
-                );
-              },
-              onCloseWindow: (c) {
-                log('웹뷰 닫힘');
-              },
-              onConsoleMessage: (c, consoleMessage) {
-                log('Console Message: ${consoleMessage.message}');
-              },
-            ),
-          ),
-          Text('$current'),
+            )
+          else
+            const SizedBox(),
+          Text('${current.toStringAsFixed(2)}s'),
         ],
       ),
     );

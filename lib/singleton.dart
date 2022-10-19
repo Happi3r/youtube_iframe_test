@@ -32,8 +32,8 @@ class Helper {
     );
   }
 
-  Future<double> getCurrentTime() async {
-    double? res = await headlessWebView?.webViewController.evaluateJavascript(
+  Future<num> getCurrentTime() async {
+    num? res = await headlessWebView?.webViewController.evaluateJavascript(
       source: 'player.getCurrentTime();',
     );
     return res ?? 0;

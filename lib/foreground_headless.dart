@@ -5,63 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shaval/singleton.dart';
-
-// The callback function should always be a top-level function.
-@pragma('vm:entry-point')
-void startCallback() {
-  // The setTaskHandler function must be called to handle the task in the background.
-  FlutterForegroundTask.setTaskHandler(MyTaskHandlerH());
-}
-
-class MyTaskHandlerH extends TaskHandler {
-  SendPort? _sendPort;
-  // int _eventCount = 0;
-
-  @override
-  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-    _sendPort = sendPort;
-
-    // You can use the getData function to get the stored data.
-    final data = await FlutterForegroundTask.getData<String>(key: 'customData');
-    print('customData: $data');
-  }
-
-  @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    double time = await FlutterForegroundTask.getData(key: 'time');
-    FlutterForegroundTask.updateService(
-      notificationTitle: 'MyTaskHandler',
-      notificationText: 'currentTime: ${time.toStringAsFixed(2)}',
-    );
-
-    // Send data to the main isolate.
-    // sendPort?.send(_eventCount++);
-  }
-
-  @override
-  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
-    // You can use the clearAllData function to clear all the stored data.
-    await FlutterForegroundTask.clearAllData();
-  }
-
-  @override
-  void onButtonPressed(String id) {
-    // Called when the notification button on the Android platform is pressed.
-    print('onButtonPressed >> $id');
-    if (id == 'play') {
-      _sendPort?.send('playVideo');
-    } else if (id == 'pause') {
-      _sendPort?.send('pauseVideo');
-    }
-  }
-
-  @override
-  void onNotificationPressed() {
-    FlutterForegroundTask.launchApp("/");
-    _sendPort?.send('onNotificationPressed');
-    log('Noti Pressed');
-  }
-}
+import 'package:shaval/task_handler.dart';
 
 class ForegroundH extends StatelessWidget {
   const ForegroundH({Key? key}) : super(key: key);
@@ -71,22 +15,23 @@ class ForegroundH extends StatelessWidget {
     return MaterialApp(
       initialRoute: '/',
       routes: {
-        '/': (context) => const ExamplePageH(),
+        '/': (context) => const ExamplePage(),
       },
     );
   }
 }
 
-class ExamplePageH extends StatefulWidget {
-  const ExamplePageH({Key? key}) : super(key: key);
+class ExamplePage extends StatefulWidget {
+  const ExamplePage({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => ExamplePageState();
+  State<StatefulWidget> createState() => _ExamplePageState();
 }
 
-class ExamplePageState extends State<ExamplePageH> {
+class _ExamplePageState extends State<ExamplePage> {
   ReceivePort? _receivePort;
   Helper helper = Helper();
+  double current = 0;
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -112,7 +57,7 @@ class ExamplePageState extends State<ExamplePageH> {
         showNotification: true,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 1000,
+        interval: 200,
         isOnceEvent: false,
         autoRunOnBoot: true,
         allowWakeLock: true,
@@ -136,6 +81,7 @@ class ExamplePageState extends State<ExamplePageH> {
     bool reqResult;
     if (await FlutterForegroundTask.isRunningService) {
       helper.headlessWebView?.dispose();
+      initWebView();
       reqResult = await FlutterForegroundTask.restartService();
     } else {
       reqResult = await FlutterForegroundTask.startService(
@@ -165,7 +111,7 @@ class ExamplePageState extends State<ExamplePageH> {
 
     if (receivePort != null) {
       _receivePort = receivePort;
-      _receivePort?.listen((message) {
+      _receivePort?.listen((message) async {
         if (message is int) {
           print('eventCount: $message');
         } else if (message is String) {
@@ -181,8 +127,10 @@ class ExamplePageState extends State<ExamplePageH> {
               helper.pauseVideo();
               break;
           }
-        } else if (message is DateTime) {
-          print('timestamp: ${message.toString()}');
+        } else if (message == null) {
+          double a = (await helper.getCurrentTime()).toDouble();
+          FlutterForegroundTask.saveData(key: 'time', value: a);
+          setState(() => current = a);
         }
       });
       return true;
@@ -281,10 +229,7 @@ class ExamplePageState extends State<ExamplePageH> {
           buttonBuilder('stop', onPressed: () {
             _stopForegroundTask();
           }),
-          buttonBuilder('시간 업데이트', onPressed: () async {
-            double a = await helper.getCurrentTime();
-            FlutterForegroundTask.saveData(key: 'time', value: a);
-          }),
+          Text('${current.toStringAsFixed(2)}s'),
         ],
       ),
     );
