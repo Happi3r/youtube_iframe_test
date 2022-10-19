@@ -31,4 +31,32 @@ class Helper {
       source: 'player.pauseVideo();',
     );
   }
+
+  Future<double> getCurrentTime() async {
+    double? res = await headlessWebView?.webViewController.evaluateJavascript(
+      source: 'player.getCurrentTime();',
+    );
+    return res ?? 0;
+  }
+
+  void setPlaybackQuality(String s) {
+    headlessWebView?.webViewController.evaluateJavascript(
+      source: 'player.setPlaybackQuality("$s");',
+    );
+  }
+
+  Future<List<dynamic>> getAvailableQualityLevels() async {
+    List<dynamic>? res =
+        (await headlessWebView?.webViewController.evaluateJavascript(
+      source: 'player.getAvailableQualityLevels();',
+    ));
+    return res ?? ['Failed'];
+  }
+
+  Future<String> getPlaybackQuality() async {
+    String? res = (await headlessWebView?.webViewController.evaluateJavascript(
+      source: 'player.getPlaybackQuality();',
+    )) as String?;
+    return res ?? 'Failed';
+  }
 }

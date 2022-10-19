@@ -15,16 +15,15 @@ void startCallback() {
 
 class MyTaskHandler extends TaskHandler {
   SendPort? _sendPort;
-  int _eventCount = 0;
+  // int _eventCount = 0;
 
   @override
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
     _sendPort = sendPort;
 
     // You can use the getData function to get the stored data.
-    final customData =
-        await FlutterForegroundTask.getData<String>(key: 'customData');
-    print('customData: $customData');
+    final data = await FlutterForegroundTask.getData<String>(key: 'customData');
+    print('customData: $data');
   }
 
   @override
@@ -36,9 +35,7 @@ class MyTaskHandler extends TaskHandler {
     );
 
     // Send data to the main isolate.
-    sendPort?.send(_eventCount);
-
-    _eventCount++;
+    // sendPort?.send(_eventCount++);
   }
 
   @override
@@ -49,28 +46,19 @@ class MyTaskHandler extends TaskHandler {
 
   @override
   void onButtonPressed(String id) {
-    // Called when the notification button on the Android platform is pressed.
     print('onButtonPressed >> $id');
-    if (id == 'testButton') {
+    if (id == 'play') {
       _sendPort?.send('playVideo');
-    } else if (id == 'sendButton') {
+    } else if (id == 'pause') {
       _sendPort?.send('pauseVideo');
     }
   }
 
   @override
   void onNotificationPressed() {
-    // Called when the notification itself on the Android platform is pressed.
-    //
-    // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
-    // this function to be called.
-
-    // Note that the app will only route to "/resume-route" when it is exited so
-    // it will usually be necessary to send a message through the send port to
-    // signal it to restore state when the app is already started.
-    FlutterForegroundTask.launchApp("/resume-route");
+    FlutterForegroundTask.launchApp("/");
     _sendPort?.send('onNotificationPressed');
-    log('notipress');
+    log('Noti Pressed');
   }
 }
 
@@ -83,7 +71,6 @@ class Foreground extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const ExamplePage(),
-        '/resume-route': (context) => const ResumeRoutePage(),
       },
     );
   }
@@ -98,7 +85,8 @@ class ExamplePage extends StatefulWidget {
 
 class ExamplePageState extends State<ExamplePage> {
   ReceivePort? _receivePort;
-  // Helper helper = Helper();
+  InAppWebViewController? controller;
+  double current = 0;
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -107,8 +95,8 @@ class ExamplePageState extends State<ExamplePage> {
         channelName: 'Foreground Notification',
         channelDescription:
             'This notification appears when the foreground service is running.',
-        channelImportance: NotificationChannelImportance.LOW,
-        priority: NotificationPriority.LOW,
+        channelImportance: NotificationChannelImportance.HIGH,
+        priority: NotificationPriority.HIGH,
         iconData: const NotificationIconData(
           resType: ResourceType.mipmap,
           resPrefix: ResourcePrefix.ic,
@@ -116,8 +104,8 @@ class ExamplePageState extends State<ExamplePage> {
           backgroundColor: Color.fromARGB(255, 255, 255, 255),
         ),
         buttons: [
-          const NotificationButton(id: 'sendButton', text: 'Send'),
-          const NotificationButton(id: 'testButton', text: 'Test'),
+          const NotificationButton(id: 'pause', text: 'Pause'),
+          const NotificationButton(id: 'play', text: 'Play'),
         ],
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -134,14 +122,6 @@ class ExamplePageState extends State<ExamplePage> {
   }
 
   Future<bool> _startForegroundTask() async {
-    // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
-    // onNotificationPressed function to be called.
-    //
-    // When the notification is pressed while permission is denied,
-    // the onNotificationPressed function is not called and the app opens.
-    //
-    // If you do not use the onNotificationPressed or launchApp function,
-    // you do not need to write this code.
     if (!await FlutterForegroundTask.canDrawOverlays) {
       final isGranted =
           await FlutterForegroundTask.openSystemAlertWindowSettings();
@@ -151,13 +131,10 @@ class ExamplePageState extends State<ExamplePage> {
       }
     }
 
-    // You can save data using the saveData function.
     await FlutterForegroundTask.saveData(key: 'customData', value: 'hello');
-    log('tlqkf');
 
     bool reqResult;
     if (await FlutterForegroundTask.isRunningService) {
-      // helper.headlessWebView?.dispose();
       reqResult = await FlutterForegroundTask.restartService();
     } else {
       reqResult = await FlutterForegroundTask.startService(
@@ -166,8 +143,6 @@ class ExamplePageState extends State<ExamplePage> {
         callback: startCallback,
       );
     }
-    // helper.headlessWebView?.run();
-    // log('${++h.index} ${hh.index}');
 
     ReceivePort? receivePort;
     if (reqResult) {
@@ -178,8 +153,6 @@ class ExamplePageState extends State<ExamplePage> {
   }
 
   Future<bool> _stopForegroundTask() async {
-    // helper.headlessWebView?.dispose();
-    initWebView();
     return await FlutterForegroundTask.stopService();
   }
 
@@ -198,16 +171,12 @@ class ExamplePageState extends State<ExamplePage> {
               Navigator.of(context).pushNamed('/resume-route');
               break;
             case 'playVideo':
-              // helper.playVideo();
               controller?.evaluateJavascript(source: 'player.playVideo();');
               break;
             case 'pauseVideo':
-              // helper.pauseVideo();
               controller?.evaluateJavascript(source: 'player.pauseVideo();');
-              setState(() => temp = "PAUSED");
               break;
             case 'onForeground':
-              // helper.playVideo();
               controller?.evaluateJavascript(source: 'player.playVideo();');
               break;
           }
@@ -215,10 +184,8 @@ class ExamplePageState extends State<ExamplePage> {
           print('timestamp: ${message.toString()}');
         }
       });
-      log('whyreg');
       return true;
     }
-    log('ynotreg');
     return false;
   }
 
@@ -234,42 +201,14 @@ class ExamplePageState extends State<ExamplePage> {
     super.initState();
     _initForegroundTask();
     _ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) async {
-      // You can get the previous ReceivePort without restarting the service.
       if (await FlutterForegroundTask.isRunningService) {
-        log('hahahaa');
+        log('Restart');
         final newReceivePort = await FlutterForegroundTask.receivePort;
         _registerReceivePort(newReceivePort);
       }
-      log('wahaa');
-      _startForegroundTask();
+      log('Start');
+      // _startForegroundTask();
     });
-    initWebView();
-    log('twice?');
-  }
-
-  void initWebView() {
-    // helper.headlessWebView = HeadlessInAppWebView(
-    //   initialFile: 'assets/player.html',
-    //   initialOptions: InAppWebViewGroupOptions(
-    //     crossPlatform: InAppWebViewOptions(
-    //       mediaPlaybackRequiresUserGesture: false,
-    //     ),
-    //   ),
-    //   onWebViewCreated: (controller) {
-    //     controller.addJavaScriptHandler(
-    //       handlerName: 'Ready',
-    //       callback: (args) {
-    //         helper.playVideo();
-    //       },
-    //     );
-    //   },
-    //   onCloseWindow: (controller) {
-    //     log('closed webview');
-    //   },
-    //   onConsoleMessage: (controller, consoleMessage) {
-    //     log('Console Message: ${consoleMessage.message}');
-    //   },
-    // );
   }
 
   @override
@@ -278,14 +217,16 @@ class ExamplePageState extends State<ExamplePage> {
     super.dispose();
   }
 
-  String temp = "TEST";
-  InAppWebViewController? controller;
-
   @override
   Widget build(BuildContext context) {
     // A widget that prevents the app from closing when the foreground service is running.
     // This widget must be declared above the [Scaffold] widget.
     return WithForegroundTask(
+      onForeground: () {
+        controller?.evaluateJavascript(
+          source: 'player.playVideo();',
+        );
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Flutter Foreground Task'),
@@ -314,18 +255,13 @@ class ExamplePageState extends State<ExamplePage> {
           buttonBuilder('stop', onPressed: () {
             _stopForegroundTask();
           }),
-          buttonBuilder('index', onPressed: () async {
+          buttonBuilder('시간 업데이트', onPressed: () async {
             double a = await controller?.evaluateJavascript(
-                source: 'player.getCurrentTime();');
+              source: 'player.getCurrentTime();',
+            );
             FlutterForegroundTask.saveData(key: 'time', value: a);
+            setState(() => current = a);
           }),
-          Text(
-            temp,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
           SizedBox(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.width * 9 / 16,
@@ -338,10 +274,9 @@ class ExamplePageState extends State<ExamplePage> {
               ),
               onWebViewCreated: (c) {
                 controller = c;
-                controller?.addJavaScriptHandler(
+                c.addJavaScriptHandler(
                   handlerName: 'Ready',
                   callback: (args) {
-                    // helper.playVideo();
                     controller?.evaluateJavascript(
                       source: 'player.playVideo()',
                     );
@@ -349,37 +284,15 @@ class ExamplePageState extends State<ExamplePage> {
                 );
               },
               onCloseWindow: (c) {
-                log('closed webview');
+                log('웹뷰 닫힘');
               },
               onConsoleMessage: (c, consoleMessage) {
                 log('Console Message: ${consoleMessage.message}');
               },
             ),
           ),
+          Text('$current'),
         ],
-      ),
-    );
-  }
-}
-
-class ResumeRoutePage extends StatelessWidget {
-  const ResumeRoutePage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Resume Route'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            // Navigate back to first route when tapped.
-            Navigator.of(context).pop();
-          },
-          child: const Text('Go back!'),
-        ),
       ),
     );
   }
