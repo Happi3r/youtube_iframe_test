@@ -43,14 +43,13 @@ class _ExamplePageState extends State<ExamplePage> {
         channelImportance: NotificationChannelImportance.HIGH,
         priority: NotificationPriority.HIGH,
         iconData: const NotificationIconData(
-          resType: ResourceType.mipmap,
+          resType: ResourceType.drawable,
           resPrefix: ResourcePrefix.ic,
-          name: 'launcher',
+          name: 'simple_notification',
           backgroundColor: Color.fromARGB(255, 255, 255, 255),
         ),
         buttons: [
           const NotificationButton(id: 'prev', text: 'PreviousVideo'),
-          const NotificationButton(id: 'pause', text: 'Pause'),
           const NotificationButton(id: 'play', text: 'Play'),
           const NotificationButton(id: 'next', text: 'NextVideo'),
         ],

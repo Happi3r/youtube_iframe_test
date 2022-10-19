@@ -30,8 +30,10 @@ class _ExamplePage extends StatefulWidget {
 class _ExamplePageState extends State<_ExamplePage> {
   ReceivePort? _receivePort;
   InAppWebViewController? controller;
+  bool serviceRunning = false;
+  bool playing = false;
   double current = 0;
-  bool isPlaying = false;
+  double duration = 0;
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -51,7 +53,6 @@ class _ExamplePageState extends State<_ExamplePage> {
         buttons: [
           // 앱 삭제 후 다시 깔아야 id 바뀜
           const NotificationButton(id: 'prev', text: 'PreviousVideo'),
-          const NotificationButton(id: 'pause', text: 'Pause'),
           const NotificationButton(id: 'play', text: 'Play'),
           const NotificationButton(id: 'next', text: 'NextVideo'),
         ],
@@ -60,7 +61,7 @@ class _ExamplePageState extends State<_ExamplePage> {
         showNotification: true,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 200,
+        interval: 1000,
         isOnceEvent: false,
         autoRunOnBoot: true,
         allowWakeLock: true,
@@ -91,7 +92,7 @@ class _ExamplePageState extends State<_ExamplePage> {
         callback: startCallback,
       );
     }
-    setState(() => isPlaying = true);
+    setState(() => serviceRunning = true);
 
     ReceivePort? receivePort;
     if (reqResult) {
@@ -102,7 +103,7 @@ class _ExamplePageState extends State<_ExamplePage> {
   }
 
   Future<bool> _stopForegroundTask() async {
-    setState(() => isPlaying = false);
+    setState(() => serviceRunning = false);
     return await FlutterForegroundTask.stopService();
   }
 
@@ -120,12 +121,14 @@ class _ExamplePageState extends State<_ExamplePage> {
             case 'onNotificationPressed':
               Navigator.of(context).pushNamed('/resume-route');
               break;
-            case 'playVideo':
-              controller?.evaluateJavascript(source: 'player.playVideo();');
+            case 'play':
+              controller?.evaluateJavascript(
+                  source:
+                      playing ? 'player.pauseVideo();' : 'player.playVideo();');
               break;
-            case 'pauseVideo':
-              controller?.evaluateJavascript(source: 'player.pauseVideo();');
-              break;
+            // case 'pause':
+            //   controller?.evaluateJavascript(source: 'player.pauseVideo();');
+            //   break;
             case 'onForeground':
               controller?.evaluateJavascript(source: 'player.playVideo();');
               break;
@@ -135,8 +138,17 @@ class _ExamplePageState extends State<_ExamplePage> {
                 source: 'player.getCurrentTime();',
               ) ??
               0;
+          num d = await controller?.evaluateJavascript(
+                source: 'player.getDuration();',
+              ) ??
+              0;
+          FlutterForegroundTask.saveData(key: 'playing', value: playing);
           FlutterForegroundTask.saveData(key: 'time', value: a.toDouble());
-          setState(() => current = a.toDouble());
+          FlutterForegroundTask.saveData(key: 'duration', value: d.toDouble());
+          setState(() {
+            current = a.toDouble();
+            duration = d.toDouble();
+          });
         }
       });
       return true;
@@ -205,7 +217,7 @@ class _ExamplePageState extends State<_ExamplePage> {
           buttonBuilder('stop', onPressed: () {
             _stopForegroundTask();
           }),
-          if (isPlaying)
+          if (serviceRunning)
             AspectRatio(
               aspectRatio: 16 / 9,
               child: InAppWebView(
@@ -223,6 +235,12 @@ class _ExamplePageState extends State<_ExamplePage> {
                       controller?.evaluateJavascript(
                         source: 'player.playVideo()',
                       );
+                    },
+                  );
+                  c.addJavaScriptHandler(
+                    handlerName: 'StateChange',
+                    callback: (args) {
+                      setState(() => playing = args[0] == 1);
                     },
                   );
                 },
