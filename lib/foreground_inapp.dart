@@ -40,8 +40,8 @@ class _ExamplePageState extends State<_ExamplePage> {
         channelName: 'Foreground Notification',
         channelDescription:
             'This notification appears when the foreground service is running.',
-        channelImportance: NotificationChannelImportance.HIGH,
-        priority: NotificationPriority.HIGH,
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
         iconData: const NotificationIconData(
           resType: ResourceType.mipmap,
           resPrefix: ResourcePrefix.ic,
@@ -49,8 +49,11 @@ class _ExamplePageState extends State<_ExamplePage> {
           backgroundColor: Color.fromARGB(255, 255, 255, 255),
         ),
         buttons: [
+          // 앱 삭제 후 다시 깔아야 id 바뀜
+          const NotificationButton(id: 'prev', text: 'PreviousVideo'),
           const NotificationButton(id: 'pause', text: 'Pause'),
           const NotificationButton(id: 'play', text: 'Play'),
+          const NotificationButton(id: 'next', text: 'NextVideo'),
         ],
       ),
       iosNotificationOptions: const IOSNotificationOptions(

@@ -45,13 +45,7 @@ class MyTaskHandler extends TaskHandler {
   void onButtonPressed(String id) {
     // Called when the notification button on the Android platform is pressed.
     print('onButtonPressed >> $id');
-    if (id == 'sendButton') {
-      log('send');
-      _sendPort?.send('playVideo');
-    } else if (id == 'testButton') {
-      log('test');
-      _sendPort?.send('pauseVideo');
-    }
+    _sendPort?.send(id);
   }
 
   @override

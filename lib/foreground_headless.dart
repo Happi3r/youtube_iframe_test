@@ -49,8 +49,10 @@ class _ExamplePageState extends State<ExamplePage> {
           backgroundColor: Color.fromARGB(255, 255, 255, 255),
         ),
         buttons: [
+          const NotificationButton(id: 'prev', text: 'PreviousVideo'),
           const NotificationButton(id: 'pause', text: 'Pause'),
           const NotificationButton(id: 'play', text: 'Play'),
+          const NotificationButton(id: 'next', text: 'NextVideo'),
         ],
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -120,11 +122,17 @@ class _ExamplePageState extends State<ExamplePage> {
             case 'onNotificationPressed':
               Navigator.of(context).pushNamed('/');
               break;
-            case 'playVideo':
+            case 'play':
               helper.playVideo();
               break;
-            case 'pauseVideo':
+            case 'pause':
               helper.pauseVideo();
+              break;
+            case 'prev':
+              // helper.pauseVideo();
+              break;
+            case 'next':
+              // helper.pauseVideo();
               break;
           }
         } else if (message == null) {
