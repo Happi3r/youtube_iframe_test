@@ -28,15 +28,15 @@ class MyTaskHandler extends TaskHandler {
     bool playing =
         (await FlutterForegroundTask.getData(key: 'playing')) ?? false;
     double time = (await FlutterForegroundTask.getData(key: 'time')) ?? 0;
-    double duration =
-        (await FlutterForegroundTask.getData(key: 'duration')) ?? 0;
+    // double duration =
+    //     (await FlutterForegroundTask.getData(key: 'duration')) ?? 0;
     log('$playing');
     FlutterForegroundTask.updateService(
       notificationTitle: 'MyTaskHandler',
       notificationText: '${time.toStringAsFixed(2)}s',
       playing: playing,
       position: time,
-      duration: duration,
+      // duration: duration,
     );
 
     // Send data to the main isolate.

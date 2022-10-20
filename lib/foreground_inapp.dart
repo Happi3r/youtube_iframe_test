@@ -61,7 +61,7 @@ class _ExamplePageState extends State<_ExamplePage> {
         showNotification: true,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 1000,
+        interval: 200,
         isOnceEvent: false,
         autoRunOnBoot: true,
         allowWakeLock: true,
@@ -118,20 +118,20 @@ class _ExamplePageState extends State<_ExamplePage> {
         } else if (message is String) {
           log(message);
           switch (message) {
-            case 'onNotificationPressed':
-              Navigator.of(context).pushNamed('/resume-route');
-              break;
             case 'play':
               controller?.evaluateJavascript(
-                  source:
-                      playing ? 'player.pauseVideo();' : 'player.playVideo();');
+                source: 'player.${playing ? 'pause' : 'play'}Video();',
+              );
               break;
             // case 'pause':
             //   controller?.evaluateJavascript(source: 'player.pauseVideo();');
             //   break;
-            case 'onForeground':
-              controller?.evaluateJavascript(source: 'player.playVideo();');
-              break;
+            // case 'onNotificationPressed':
+            //   Navigator.of(context).pushNamed('/');
+            //   break;
+            // case 'onForeground':
+            //   controller?.evaluateJavascript(source: 'player.playVideo();');
+            //   break;
           }
         } else if (message == null) {
           num a = await controller?.evaluateJavascript(

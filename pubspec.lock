@@ -198,9 +198,11 @@ packages:
   flutter_foreground_task:
     dependency: "direct main"
     description:
-      path: "Z:/Projects/flutter/flutter_foreground_task"
-      relative: false
-    source: path
+      path: "."
+      ref: HEAD
+      resolved-ref: f9d3cd6a47fed59f3be73b4d01697208b90556c0
+      url: "https://github.com/Happi3r/flutter_foreground_task"
+    source: git
     version: "3.10.0"
   flutter_inappwebview:
     dependency: "direct main"
