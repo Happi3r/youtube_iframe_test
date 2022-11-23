@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:isolate';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -75,20 +76,19 @@ class _ExamplePageState extends State<_ExamplePage> {
       final isGranted =
           await FlutterForegroundTask.openSystemAlertWindowSettings();
       if (!isGranted) {
-        print('SYSTEM_ALERT_WINDOW permission denied!');
         return false;
       }
     }
 
-    await FlutterForegroundTask.saveData(key: 'customData', value: 'hello');
+    // await FlutterForegroundTask.saveData(key: 'customData', value: 'hello');
 
     bool reqResult;
     if (await FlutterForegroundTask.isRunningService) {
       reqResult = await FlutterForegroundTask.restartService();
     } else {
       reqResult = await FlutterForegroundTask.startService(
-        notificationTitle: 'Foreground Service is running',
-        notificationText: 'Tap to return to the app',
+        notificationTitle: 'Waktaverse Music',
+        notificationText: 'init',
         callback: startCallback,
       );
     }
@@ -123,15 +123,6 @@ class _ExamplePageState extends State<_ExamplePage> {
                 source: 'player.${playing ? 'pause' : 'play'}Video();',
               );
               break;
-            // case 'pause':
-            //   controller?.evaluateJavascript(source: 'player.pauseVideo();');
-            //   break;
-            // case 'onNotificationPressed':
-            //   Navigator.of(context).pushNamed('/');
-            //   break;
-            // case 'onForeground':
-            //   controller?.evaluateJavascript(source: 'player.playVideo();');
-            //   break;
           }
         } else if (message == null) {
           num a = await controller?.evaluateJavascript(
