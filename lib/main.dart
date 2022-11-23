@@ -4,5 +4,5 @@ import 'package:shaval/foreground_inapp.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const Foreground());
+  runApp(const ForegroundH());
 }

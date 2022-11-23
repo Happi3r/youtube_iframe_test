@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:isolate';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 // The callback function should always be a top-level function.

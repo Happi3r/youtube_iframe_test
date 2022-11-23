@@ -1,11 +1,13 @@
 import 'dart:developer';
 import 'dart:isolate';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:shaval/singleton.dart';
 import 'package:shaval/task_handler.dart';
+import 'package:shaval/test.dart';
 
 class ForegroundH extends StatelessWidget {
   const ForegroundH({Key? key}) : super(key: key);
@@ -17,6 +19,22 @@ class ForegroundH extends StatelessWidget {
       routes: {
         '/': (context) => const ExamplePage(),
       },
+    );
+  }
+}
+
+class AudioHandlerProvider extends ChangeNotifier {
+  AudioHandler get audioHandler => _audioHandler;
+  late AudioHandler _audioHandler;
+
+  void initAudioHandler() async {
+    _audioHandler = await AudioService.init(
+      builder: () => AudioTaskHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.waktaverse.music',
+        androidNotificationChannelName: 'Audio playback',
+        androidNotificationOngoing: true,
+      ),
     );
   }
 }
